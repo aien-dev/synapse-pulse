@@ -15,9 +15,12 @@ have_omc=$(sha256sum "$omc" | cut -d' ' -f1)
 [ "$have_omc" = "$want_omc" ] || { echo "build.sh: omc sha256 $have_omc, omega.pin wants $want_omc" >&2; exit 65; }
 { printf 'om2\n'; cat "$src/seed/json/json.om" "$here"/src/*.om; } > "$out.unit.om"
 rm -f "$out"
-if ! "$omc" < "$out.unit.om" > "$out.tmp" 2> "$out.err"; then
-  cat "$out.err" >&2; rm -f "$out.tmp"; exit 70
-fi
-if [ -s "$out.err" ]; then cat "$out.err" >&2; rm -f "$out.tmp"; exit 70; fi
+fail() { # rerun once as `om2 diag` for the column and token of the refusal, then stop
+  cat "$out.err" >&2
+  { printf 'om2 diag\n'; tail -n +2 "$out.unit.om"; } | "$omc" 2>&1 >/dev/null | grep '^omc-diag' >&2
+  rm -f "$out.tmp"; exit 70
+}
+"$omc" < "$out.unit.om" > "$out.tmp" 2> "$out.err" || fail
+[ -s "$out.err" ] && fail
 chmod 755 "$out.tmp" && mv "$out.tmp" "$out"
 echo "built $out" >&2

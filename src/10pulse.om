@@ -1116,7 +1116,7 @@ ret true
 end
 
 note pu_gh: GET path (po,pn); body moved to out[0..); returns body length, -1 cap, -2 failure, -3 too large
-fn pu_gh out edit uchar * po ulong pn ulong to long
+fn pu_gh obf edit uchar * po ulong pn ulong to long
 if ge get gcnt 2 40
 w = write 2 tcap 0 len tcap
 w = write 2 gsp po pn
@@ -1152,7 +1152,7 @@ if eq get gfl 1 1
 fp = pu_pathi 5 tsl
 syn_ps ko kn
 syn_pt thttp
-r = syn_rfile fp syn_len fp out
+r = syn_rfile fp syn_len fp obf
 if lt r 0
 w = write 2 tnofix 0 len tnofix
 w = write 2 gsp fp syn_len fp
@@ -1178,7 +1178,7 @@ syn_ps eo en
 syn_ap h syn_len h
 end
 syn_ap po pn
-n = syn_run out 60000000000
+n = syn_run obf 60000000000
 if gt get gxs 0 1
 w = write 2 tghfail 0 len tghfail
 w = write 2 gsp po pn
@@ -1188,7 +1188,7 @@ put gcnt 3 add get gcnt 3 1
 ret neg long 2
 end
 end
-if gt get gxs 1 long len out
+if gt get gxs 1 long len obf
 w = write 2 tbig 0 len tbig
 w = write 2 gsp po pn
 w = write 2 tnl 0 1
@@ -1196,13 +1196,13 @@ syn_rew base
 ret neg long 3
 end
 st = ulong 0
-if and gt n 12 eq get out 0 72
+if and gt n 12 eq get obf 0 72
 sp = ulong 0
-while and lt sp n ne get out sp 32 bound 64
+while and lt sp n ne get obf sp 32 bound 64
 sp = add sp 1
 end
 for i ulong 3
-c = ulong get out min add add sp 1 i sub n 1
+c = ulong get obf min add add sp 1 i sub n 1
 st = add mul st 10 sub c 48
 end
 end
@@ -1212,21 +1212,21 @@ neo = syn_mark
 nen = ulong 0
 ln = ulong 0
 for i ulong n
-if eq get out i 10
+if eq get obf i 10
 e = i
-if and gt e ls eq get out sub e 1 13
+if and gt e ls eq get obf sub e 1 13
 e = sub e 1
 end
 if and gt ln 0 eq e ls
 bo = add i 1
 break
 end
-if and gt ln 0 pu_hdr out ls e
+if and gt ln 0 pu_hdr obf ls e
 v = add ls 5
-while and lt v e eq get out v 32 bound 4096
+while and lt v e eq get obf v 32 bound 4096
 v = add v 1
 end
-syn_pa out v sub e v
+syn_pa obf v sub e v
 nen = sub e v
 end
 ln = add ln 1
@@ -1236,7 +1236,7 @@ end
 bl = sub n min bo n
 if eq st 200
 for i ulong bl
-put out i get out add bo i
+put obf i get obf add bo i
 end
 bp = pu_pathi 0 tsletag
 syn_pb 47
@@ -1244,7 +1244,7 @@ syn_ps ko kn
 syn_pt tbody
 fd = syn_wbeg bp syn_len bp
 if ge fd 0
-w = write int fd out 0 bl
+w = write int fd obf 0 bl
 r = syn_wend fd bp syn_len bp
 end
 if gt nen 0
@@ -1266,7 +1266,7 @@ bp = pu_pathi 0 tsletag
 syn_pb 47
 syn_ps ko kn
 syn_pt tbody
-r = syn_rfile bp syn_len bp out
+r = syn_rfile bp syn_len bp obf
 if lt r 0
 q = unlink gsp ep epn
 w = write 2 tghfail 0 len tghfail
@@ -1291,7 +1291,7 @@ ret neg long 2
 end
 
 fn pu_pulls r ulong to void
-out = new uchar 1114112 0
+obf = new uchar 1114112 0
 tape = new uint 786432 0
 tmp = new uchar 8192 0
 m = syn_mark
@@ -1299,7 +1299,7 @@ syn_pt trepos
 syn_ps get grpo r get grpl r
 syn_pt tpulls
 pl = syn_len m
-n = pu_gh out m pl
+n = pu_gh obf m pl
 syn_rew m
 if lt n 0
 ret
@@ -1310,7 +1310,7 @@ w = write 2 tnl 0 1
 ret
 end
 q = js_init tape 983040 64
-q = js_parse out tape ulong n
+q = js_parse obf tape ulong n
 if or lt q 0 ne js_type tape 0 jsarr
 text tbadpr "synapse-pulse: PR list did not parse"
 w = write 2 tbadpr 0 len tbadpr
@@ -1319,17 +1319,17 @@ ret
 end
 e = js_first tape 0
 while ne e jsnone bound 100000
-nu = pu_memb out tape e tknum
-sv = pu_memb out tape e tkstate
-mv = pu_memb out tape e tkmerg
-hv = pu_memb out tape e tkhead
+nu = pu_memb obf tape e tknum
+sv = pu_memb obf tape e tkstate
+mv = pu_memb obf tape e tkmerg
+hv = pu_memb obf tape e tkhead
 i = get gprc 0
 if and ne nu jsnone lt i 8192
 put gprr i r
-put gprn i js_tou out js_off tape nu
+put gprn i js_tou obf js_off tape nu
 put gprs i 2
 if ne sv jsnone
-if js_streq out js_off tape sv topen
+if js_streq obf js_off tape sv topen
 put gprs i 1
 end
 end
@@ -1342,9 +1342,9 @@ end
 put gprho i 0
 put gprhl i 0
 if ne hv jsnone
-rv = pu_memb out tape hv tkref
+rv = pu_memb obf tape hv tkref
 if ne rv jsnone
-o = pu_sval out tape rv tmp
+o = pu_sval obf tape rv tmp
 put gprho i o
 put gprhl i ulong get gxs 2
 end
@@ -1378,7 +1378,7 @@ ret false
 end
 
 fn pu_files i ulong to void
-out = new uchar 1114112 0
+obf = new uchar 1114112 0
 tape = new uint 786432 0
 tmp = new uchar 8192 0
 hit = new uchar 1024 0
@@ -1390,22 +1390,22 @@ syn_pt tpullsl
 syn_pd get gprn i
 syn_pt tfiles
 pl = syn_len m
-n = pu_gh out m pl
+n = pu_gh obf m pl
 syn_rew m
 if or lt n 0 gt n 983040
 ret
 end
 q = js_init tape 983040 64
-q = js_parse out tape ulong n
+q = js_parse obf tape ulong n
 if or lt q 0 ne js_type tape 0 jsarr
 ret
 end
 e = js_first tape 0
 while ne e jsnone bound 100000
-fv = pu_memb out tape e tkfile
+fv = pu_memb obf tape e tkfile
 if ne fv jsnone
 fm = syn_mark
-fo = pu_sval out tape fv tmp
+fo = pu_sval obf tape fv tmp
 fl = ulong get gxs 2
 for c ulong get gcn 0
 if and and eq get gca c 1 eq get gkd c 3 eq get hit c 0

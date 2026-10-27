@@ -11,11 +11,15 @@ jobs:
       - name: Check out omega-mv at omega.pin
         run: |
           sha=$(sed -n '1s/^aien-dev\/omega-mv@//p' omega.pin)
-          git clone --quiet https://github.com/aien-dev/omega-mv.git omega-mv
-          git -C omega-mv checkout --quiet --detach "$sha"
+          git init --quiet omega-mv
+          git -C omega-mv fetch --quiet --depth 1 https://github.com/aien-dev/omega-mv.git "$sha"
+          git -C omega-mv checkout --quiet --detach FETCH_HEAD
           test "$(git -C omega-mv rev-parse HEAD)" = "$sha"
       - name: Verify pinned omc
         run: |
           echo "$(sed -n '2s/^omc-sha256 //p' omega.pin)  omega-mv/seed/out/omc" | sha256sum -c
+      - name: Diagnose every function (one compile per function)
+        continue-on-error: true
+        run: sh tests/diag.sh "$PWD/omega-mv" seed/json/json.om
       - name: Tests
         run: OMEGA_SRC=$PWD/omega-mv sh tests/run.sh

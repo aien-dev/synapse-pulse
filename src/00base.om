@@ -190,10 +190,10 @@ end
 put gavs 0 add u n
 end
 
-fn syn_rdall fd int out edit uchar * cap ulong to ulong
+fn syn_rdall fd int obf edit uchar * cap ulong to ulong
 k = ulong 0
 while lt k cap bound 999999
-r = read fd out k sub cap k
+r = read fd obf k sub cap k
 if le r 0
 break
 end
@@ -206,7 +206,7 @@ note syn_run: run the packed list in gav (first record an absolute path, never a
 note child stdin /dev/null, stdout and stderr captured in memfds; out gets up to len out bytes.
 note gxs 0: exit code 0..255, 300+signal, 400 timeout (killed), 401 fork or memfd failure
 note gxs 1: full stdout size (may exceed len out); gerrb holds the first stderr bytes
-fn syn_run out edit uchar * tmo ulong to ulong
+fn syn_run obf edit uchar * tmo ulong to ulong
 put gerrn 0 0
 m = int memfd tmemfd 0 len tmemfd 1
 e = int memfd tmemfd 0 len tmemfd 1
@@ -259,7 +259,7 @@ put gxs 0 code
 sz = fseek m 0 2
 put gxs 1 sz
 r = fseek m 0 0
-n = syn_rdall m out len out
+n = syn_rdall m obf len obf
 r = fseek e 0 0
 k = syn_rdall e gerrb len gerrb
 put gerrn 0 k
@@ -407,7 +407,7 @@ ret r
 end
 
 note syn_rfile: read the file at pool path (po,pn) into out; byte count or negative errno; gxs 1 holds the file size
-fn syn_rfile po ulong pn ulong out edit uchar * to long
+fn syn_rfile po ulong pn ulong obf edit uchar * to long
 fd = fopen gsp po pn 524288 0
 if lt fd 0
 ret fd
@@ -415,7 +415,7 @@ end
 sz = fseek int fd 0 2
 put gxs 1 sz
 r = fseek int fd 0 0
-n = syn_rdall int fd out len out
+n = syn_rdall int fd obf len obf
 c = fclose int fd
 ret long n
 end
