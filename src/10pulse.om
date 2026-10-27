@@ -1,0 +1,1704 @@
+note synapse-pulse 10pulse.om: reconcile the claims ledger with GitHub and live omp sessions.
+global gop ulong 16
+global gopl ulong 16
+global gfl ulong 8
+global gnow ulong 2
+global gco ulong 16384
+global gcl ulong 16384
+global gca uchar 1024
+global gkd uchar 1024
+global gcn ulong 1
+global gtk uint 24576
+global gtn ulong 1024
+global grpo ulong 128
+global grpl ulong 128
+global grp uchar 128
+global grn ulong 1
+global gprr ulong 8192
+global gprn ulong 8192
+global gprs uchar 8192
+global gprm uchar 8192
+global gprho ulong 8192
+global gprhl ulong 8192
+global gprc ulong 1
+global gcnt ulong 32
+global gout uchar 4194304
+global gon ulong 1
+global gfp ulong 8
+global gstop uint 32
+global garr ulong 16
+global gstopn ulong 1
+
+text tusage "usage: synapse-pulse [--home DIR] run [--alert] [--alert-dir DIR] [--gh PATH] [--sessions DIR] [--claims-bin PATH] [--offline FIXTUREDIR] [--now YYYY-MM-DDTHH:MM:SSZ]"
+text trun "run"
+text thome "--home"
+text talert "--alert"
+text tadir "--alert-dir"
+text tgh "--gh"
+text tsess "--sessions"
+text tcbin "--claims-bin"
+text toff "--offline"
+text tnow "--now"
+text tenvh "AIEN_COORD_HOME="
+text tenvhm "HOME="
+text tdhome "/.local/state/aien-coord"
+text tdadir "/home/drakestapleton/.local/state/aienos/watch"
+text tdgh "/home/drakestapleton/.local/bin/gh"
+text tdsess "/home/drakestapleton/.omp/agent/sessions"
+text tnohome "synapse-pulse: no --home, AIEN_COORD_HOME or HOME"
+text tnocbin "synapse-pulse: --claims-bin PATH is required (absolute path to synapse-claims)"
+text tbadnow "synapse-pulse: --now must be YYYY-MM-DDTHH:MM:SSZ"
+text tlist "list"
+text tall "--all"
+text tconf "conflicts"
+text texpire "expire"
+text tagent "--agent"
+text tpulse "pulse"
+text tslpu "/pulse"
+text tsletag "/pulse/etags"
+text tslfind "/pulse/findings.jsonl"
+text tslreq "/pulse/requests.log"
+text tsl "/"
+text tetag ".etag"
+text tbody ".body"
+text thttp ".http"
+text tenv "/usr/bin/env"
+text tghome "HOME=/home/drakestapleton"
+text tgpath "PATH=/home/drakestapleton/.local/bin:/usr/bin:/bin"
+text tapi "api"
+text tdi "-i"
+text tdh "-H"
+text tinm "If-None-Match: "
+text tclfail "synapse-pulse: synapse-claims failed: "
+text tclbad "synapse-pulse: malformed synapse-claims output line"
+text tkid "id"
+text tkagent "agent"
+text tksess "session"
+text tkkind "kind"
+text tktarg "target"
+text tkmode "mode"
+text tkstate "state"
+text tkint "intent"
+text tkexp "expires"
+text tkact "active"
+text tksince "since"
+text tka "a"
+text tkb "b"
+text tkreas "reason"
+text tkop "op"
+text tknum "number"
+text tkmerg "merged_at"
+text tkhead "head"
+text tkref "ref"
+text tkfile "filename"
+text topen "open"
+text tclosed "closed"
+text tprepo "repo:"
+text tpbr "branch:"
+text tppath "path:"
+text tppr "pr:"
+text tpext "ext:"
+text tmerged "MERGED"
+text tdeploy "DEPLOYED"
+text tjsonl ".jsonl"
+text tpulls "/pulls?state=all&per_page=50"
+text tfiles "/files?per_page=100"
+text trepos "repos/"
+text tpullsl "/pulls/"
+text tqk "{\"kind\":\""
+text tqsev "\",\"severity\":\""
+text tqrepo "\",\"repo\":"
+text tqtarg ",\"target\":"
+text tqid ",\"id\":"
+text tqagent ",\"agent\":"
+text tqsess ",\"session\":"
+text tqpr ",\"pr\":"
+text tqpath ",\"path\":"
+text tqoid ",\"other_id\":"
+text tqoag ",\"other_agent\":"
+text tqdet ",\"detail\":"
+text tqend "}\n"
+text tsevw "warn"
+text tsevi "info"
+text tseve "error"
+text fexp "expired_lease"
+text fdead "dead_session"
+text funk "unknown_session"
+text funcl "unclaimed_pr"
+text fstat "status_contradicted"
+text fdup "duplicate_work"
+text fconf "conflict"
+text tstops "with from into this that them they were been have will also make should would could than then when what which there their about after before over under only just more most some such each other being does done must need"
+text tcap "synapse-pulse: GitHub request cap (40 per run) reached; skipped: "
+text tghfail "synapse-pulse: GitHub read failed: "
+text tbig "synapse-pulse: response over 983040 bytes, skipped: "
+text tnofix "synapse-pulse: offline fixture missing: "
+text tsp " "
+text tinmeq " inm="
+text tstateq " status="
+text tbyteq " bytes="
+text tsrceq " source="
+text tsgh "gh"
+text tsoff "offline"
+text tscache "cache"
+text tdash "-"
+text texpok "synapse-pulse: exec synapse-claims expire --agent pulse exit="
+text tevents " events="
+text tkalert "COORD-DRIFT"
+text tslalert "/ALERT"
+text tslalog "/alerts.log"
+text tsince " (since "
+text tdetails "; details "
+text tclear "/alerts.log; clear with: aien-watch clear COORD-DRIFT)\n"
+text tresolv " RESOLVED COORD-DRIFT "
+text tcolsp ": "
+text tkalcol "COORD-DRIFT:"
+
+fn pu_ob c uchar to void
+n = get gon 0
+if ge n len gout
+put gfl 7 1
+ret
+end
+put gout n c
+put gon 0 add n 1
+end
+
+fn pu_ot t view uchar * to void
+for i ulong len t
+pu_ob get t i
+end
+end
+
+fn pu_od v ulong to void
+m = syn_mark
+syn_pd v
+for i ulong syn_len m
+pu_ob get gsp add m i
+end
+syn_rew m
+end
+
+fn pu_hex v ulong to uchar
+if lt v 10
+ret uchar add 48 v
+end
+ret uchar add 87 v
+end
+
+note pu_oq: write pool string (o,n) as a JSON string; control bytes are escaped
+fn pu_oq o ulong n ulong to void
+pu_ob 34
+for i ulong n
+c = get gsp add o i
+if or eq c 34 eq c 92
+pu_ob 92
+pu_ob c
+else
+if lt c 32
+pu_ob 92
+if eq c 10
+pu_ob 110
+else
+if eq c 9
+pu_ob 116
+else
+if eq c 13
+pu_ob 114
+else
+pu_ob 117
+pu_ob 48
+pu_ob 48
+pu_ob pu_hex ulong shr c 4
+pu_ob pu_hex ulong and c 15
+end
+end
+end
+else
+pu_ob c
+end
+end
+end
+pu_ob 34
+end
+
+fn pu_cf c ulong f ulong to ulong
+ret get gco add mul c 16 f
+end
+
+fn pu_cl c ulong f ulong to ulong
+ret get gcl add mul c 16 f
+end
+
+fn pu_oqf c ulong f ulong to void
+if ge c get gcn 0
+pu_ob 34
+pu_ob 34
+ret
+end
+pu_oq pu_cf c f pu_cl c f
+end
+
+note pu_fnd: one finding line with the fixed 12 keys; gfp 0 pr, 1/2 path, 3/4 detail
+note sev 0 info, 1 warn, 2 error; c and oc are claim rows (oc 4294967295 = none)
+fn pu_fnd kind view uchar * sev ulong c ulong oc ulong to void
+if and gt sev 0 eq get gcnt 8 0
+put gcnt 8 1
+put gcnt 9 get gfp 3
+put gcnt 10 get gfp 4
+end
+pu_ot tqk
+pu_ot kind
+pu_ot tqsev
+if eq sev 0
+pu_ot tsevi
+put gcnt 1 add get gcnt 1 1
+else
+if eq sev 1
+pu_ot tsevw
+else
+pu_ot tseve
+end
+put gcnt 0 add get gcnt 0 1
+end
+pu_ot tqrepo
+pu_oqf c 9
+pu_ot tqtarg
+pu_oqf c 4
+pu_ot tqid
+pu_oqf c 0
+pu_ot tqagent
+pu_oqf c 1
+pu_ot tqsess
+pu_oqf c 2
+pu_ot tqpr
+pu_od get gfp 0
+pu_ot tqpath
+pu_oq get gfp 1 get gfp 2
+pu_ot tqoid
+pu_oqf oc 0
+pu_ot tqoag
+pu_oqf oc 1
+pu_ot tqdet
+pu_oq get gfp 3 get gfp 4
+pu_ot tqend
+put gfp 0 0
+put gfp 1 0
+put gfp 2 0
+put gfp 3 0
+put gfp 4 0
+end
+
+note pu_det: mark the detail text that starts at pool offset m
+fn pu_det m ulong to void
+put gfp 3 m
+put gfp 4 syn_len m
+end
+
+fn pu_opt i ulong to bool
+ret ne get gopl i 0
+end
+
+note pu_popt: append option i (a pool string) to the pool
+fn pu_popt i ulong to void
+syn_ps get gop i get gopl i
+end
+
+fn pu_pathi i ulong t view uchar * to ulong
+m = syn_mark
+pu_popt i
+syn_pt t
+ret m
+end
+
+fn pu_cargv to void
+syn_ainit
+syn_ap get gop 4 get gopl 4
+syn_at thome
+syn_ap get gop 0 get gopl 0
+if eq get gfl 2 1
+syn_at tnow
+syn_ap get gop 6 get gopl 6
+end
+end
+
+fn pu_errout pre view uchar * to void
+w = write 2 pre 0 len pre
+c = get gxs 0
+m = syn_mark
+syn_pd ulong c
+w = write 2 gsp m syn_len m
+syn_rew m
+w = write 2 tsp 0 1
+w = write 2 gerrb 0 get gerrn 0
+w = write 2 tnl 0 1
+end
+
+note pu_key: field number of member key token at src off; 20 for active, 99 otherwise
+fn pu_key src view uchar * off ulong to ulong
+if js_streq src off tkid
+ret 0
+end
+if js_streq src off tkagent
+ret 1
+end
+if js_streq src off tksess
+ret 2
+end
+if js_streq src off tkkind
+ret 3
+end
+if js_streq src off tktarg
+ret 4
+end
+if js_streq src off tkmode
+ret 5
+end
+if js_streq src off tkstate
+ret 6
+end
+if js_streq src off tkint
+ret 7
+end
+if js_streq src off tkexp
+ret 8
+end
+if js_streq src off tksince
+ret 11
+end
+if js_streq src off tkact
+ret 20
+end
+ret 99
+end
+
+note pu_sval: decode string token v into the pool; offset returned, gxs 2 = length (0 if not a string)
+fn pu_sval src view uchar * tape view uint * v ulong tmp edit uchar * to ulong
+m = syn_mark
+put gxs 2 0
+if ne js_type tape v jsstr
+ret m
+end
+n = js_sget src js_off tape v tmp
+if lt n 0
+ret m
+end
+syn_pa tmp 0 ulong n
+put gxs 2 n
+ret m
+end
+
+note pu_memb: value token of member key in object token o, or jsnone
+fn pu_memb src view uchar * tape view uint * o ulong key view uchar * to ulong
+if ne js_type tape o jsobj
+ret jsnone
+end
+k = js_first tape o
+while ne k jsnone bound 999999
+if js_streq src js_off tape k key
+ret add k 1
+end
+k = js_mnext tape k
+end
+ret jsnone
+end
+
+note pu_derive: kind code, repo (field 9) and rest (field 10) from the target string
+fn pu_derive c ulong to void
+o = pu_cf c 4
+n = pu_cl c 4
+b = mul c 16
+k = uchar 0
+p = ulong 0
+sep = uchar 0
+if syn_pre o n tprepo
+k = 1
+p = len tprepo
+end
+if syn_pre o n tpbr
+k = 2
+p = len tpbr
+sep = 35
+end
+if syn_pre o n tppath
+k = 3
+p = len tppath
+sep = 58
+end
+if syn_pre o n tppr
+k = 4
+p = len tppr
+sep = 35
+end
+if syn_pre o n tpext
+k = 5
+end
+put gkd c k
+if or eq k 0 eq k 5
+ret
+end
+e = n
+if ne sep 0
+e = syn_find o n p sep
+end
+put gco add b 9 add o p
+put gcl add b 9 sub e p
+if lt e n
+put gco add b 10 add add o e 1
+put gcl add b 10 sub sub n e 1
+end
+end
+
+fn pu_ldrow src view uchar * tape edit uint * tmp edit uchar * to long
+r = js_parse src tape len src
+if lt r 0
+ret neg long 65
+end
+if ne js_type tape 0 jsobj
+ret neg long 65
+end
+c = get gcn 0
+if ge c 1024
+text tmany "synapse-pulse: over 1024 claims"
+syn_die tmany 70
+end
+for f ulong 16
+put gco add mul c 16 f 0
+put gcl add mul c 16 f 0
+end
+put gca c 0
+k = js_first tape 0
+while ne k jsnone bound 999999
+f = pu_key src js_off tape k
+v = add k 1
+if lt f 12
+o = pu_sval src tape v tmp
+put gco add mul c 16 f o
+put gcl add mul c 16 f ulong get gxs 2
+end
+if and eq f 20 eq js_type tape v jstrue
+put gca c 1
+end
+k = js_mnext tape k
+end
+if eq pu_cl c 0 0
+ret neg long 65
+end
+put gcn 0 add c 1
+pu_derive c
+ret 0
+end
+
+note pu_lines: kind 0 list rows, 1 conflicts, 2 expire events; returns rows or negative
+fn pu_lines raw view uchar * n ulong kind ulong to long
+tape = new uint 65536 0
+tmp = new uchar 65536 0
+r = js_init tape 65536 64
+s = ulong 0
+rows = long 0
+for i ulong add n 1
+if or eq i n eq get raw min i sub len raw 1 10
+if gt i s
+q = long 0
+if eq kind 0
+q = pu_ldrow part raw s sub i s tape tmp
+end
+if eq kind 1
+q = pu_cfrow part raw s sub i s tape tmp
+end
+if eq kind 2
+q = pu_exrow part raw s sub i s tape tmp
+end
+if lt q 0
+w = write 2 tclbad 0 len tclbad
+w = write 2 tnl 0 1
+ret q
+end
+rows = add rows 1
+end
+s = add i 1
+end
+end
+ret rows
+end
+
+note pu_byid: claim row with id (o,n), or 4294967295
+fn pu_byid o ulong n ulong to ulong
+for c ulong get gcn 0
+if syn_peq pu_cf c 0 pu_cl c 0 o n
+ret c
+end
+end
+ret 4294967295
+end
+
+fn pu_cfrow src view uchar * tape edit uint * tmp edit uchar * to long
+r = js_parse src tape len src
+if lt r 0
+ret neg long 65
+end
+a = pu_memb src tape 0 tka
+b = pu_memb src tape 0 tkb
+if or eq a jsnone eq b jsnone
+ret neg long 65
+end
+ia = pu_memb src tape a tkid
+ib = pu_memb src tape b tkid
+if or eq ia jsnone eq ib jsnone
+ret neg long 65
+end
+m = syn_mark
+o = pu_sval src tape ia tmp
+ca = pu_byid o ulong get gxs 2
+o = pu_sval src tape ib tmp
+cb = pu_byid o ulong get gxs 2
+syn_rew m
+rs = pu_memb src tape 0 tkreas
+m = syn_mark
+text tdconf "ledger conflict "
+syn_pt tdconf
+if ne rs jsnone
+o = pu_sval src tape rs tmp
+end
+syn_pb 58
+syn_pb 32
+if lt ca get gcn 0
+syn_ps pu_cf ca 4 pu_cl ca 4
+end
+text tvs " vs "
+syn_pt tvs
+if lt cb get gcn 0
+syn_ps pu_cf cb 4 pu_cl cb 4
+end
+pu_det m
+pu_fnd fconf 2 ca cb
+ret 0
+end
+
+fn pu_exrow src view uchar * tape edit uint * tmp edit uchar * to long
+r = js_parse src tape len src
+if lt r 0
+ret neg long 65
+end
+ix = pu_memb src tape 0 tkid
+if eq ix jsnone
+ret neg long 65
+end
+m = syn_mark
+o = pu_sval src tape ix tmp
+c = pu_byid o ulong get gxs 2
+syn_rew m
+if ge c get gcn 0
+ret 0
+end
+m = syn_mark
+text tdexp "lease expired at "
+syn_pt tdexp
+syn_ps pu_cf c 8 pu_cl c 8
+text tdexp2 "; pulse appended the expire event"
+syn_pt tdexp2
+pu_det m
+pu_fnd fexp 1 c 4294967295
+ret 0
+end
+
+fn pu_ldclaims to long
+raw = new uchar 3145728 0
+pu_cargv
+syn_at tlist
+syn_at tall
+n = syn_run raw 120000000000
+if ne get gxs 0 0
+pu_errout tclfail
+ret neg long 70
+end
+if gt get gxs 1 long len raw
+text tclbig "synapse-pulse: synapse-claims list output over 3 MiB"
+syn_die tclbig 70
+end
+r = pu_lines raw n 0
+ret r
+end
+
+fn pu_ldconf to long
+raw = new uchar 1048576 0
+pu_cargv
+syn_at tconf
+n = syn_run raw 120000000000
+if gt get gxs 0 1
+pu_errout tclfail
+ret neg long 70
+end
+r = pu_lines raw n 1
+ret r
+end
+
+fn pu_expire to long
+need = ulong 0
+for c ulong get gcn 0
+if and eq get gca c 0 ne pu_cl c 8 0
+t = syn_tsp pu_cf c 8 pu_cl c 8
+if and eq get gxs 2 1 le t get gnow 0
+need = 1
+end
+end
+end
+if eq need 0
+ret 0
+end
+raw = new uchar 1048576 0
+pu_cargv
+syn_at texpire
+syn_at tagent
+syn_at tpulse
+n = syn_run raw 120000000000
+w = write 2 texpok 0 len texpok
+m = syn_mark
+syn_pd ulong get gxs 0
+w = write 2 gsp m syn_len m
+syn_rew m
+if ne get gxs 0 0
+w = write 2 tnl 0 1
+pu_errout tclfail
+ret neg long 70
+end
+r = pu_lines raw n 2
+w = write 2 tevents 0 len tevents
+m = syn_mark
+syn_pd ulong r
+w = write 2 gsp m syn_len m
+syn_rew m
+w = write 2 tnl 0 1
+ret r
+end
+
+note sessions: claim session is an absolute .jsonl path, a top-level session uuid or a dotted omp agent id
+fn pu_mtime po ulong pn ulong to long
+st = new uchar 128 0
+r = stat gsp po pn st 0 128
+if lt r 0
+ret neg long 1
+end
+v = ulong 0
+for i ulong 8
+v = or v shl ulong get st add 88 i mul i 8
+end
+ret long v
+end
+
+fn pu_isuuid o ulong n ulong to bool
+if ne n 36
+ret false
+end
+for i ulong 36
+c = get gsp add o i
+if or or eq i 8 eq i 13 or eq i 18 eq i 23
+if ne c 45
+ret false
+end
+else
+if not or and ge c 48 le c 57 and ge c 97 le c 102
+ret false
+end
+end
+end
+ret true
+end
+
+note pu_agpath: append the subagent file path for agent id (so,sn) under the session dir prefix already in the pool
+fn pu_agpath so ulong sn ulong to void
+for i ulong sn
+if eq get gsp add so i 46
+syn_ps so i
+syn_pb 47
+end
+end
+syn_ps so sn
+syn_pt tjsonl
+end
+
+note pu_scan2: entries of one slug dir (po,pn); best mtime for session (so,sn); mode 1 uuid, 2 agent id
+fn pu_scan2 po ulong pn ulong so ulong sn ulong mode ulong to long
+best = neg long 1
+fd = fopen gsp po pn 524288 0
+if lt fd 0
+ret best
+end
+db = new uchar 32768 0
+while true bound 100000
+k = getdnts int fd db 0 len db
+if le k 0
+break
+end
+p = ulong 0
+while lt p ulong k bound 100000
+rl = or ulong get db add p 16 shl ulong get db add p 17 8
+nm = add p 19
+e = nm
+while and lt e add p rl ne get db e 0 bound 4096
+e = add e 1
+end
+if gt sub e nm 2
+m = syn_mark
+syn_ps po pn
+syn_pb 47
+syn_pa db nm sub e nm
+if eq mode 1
+q = syn_mark
+syn_pb 95
+syn_ps so sn
+syn_pt tjsonl
+l = syn_len q
+syn_rew q
+ok = false
+nl = sub e nm
+if ge nl l
+ok = true
+for j ulong l
+if ne get db add sub e l j get gsp add q j
+ok = false
+end
+end
+end
+if not ok
+syn_rew m
+end
+end
+if eq mode 2
+syn_pb 47
+pu_agpath so sn
+end
+if gt syn_len m 0
+t = pu_mtime m syn_len m
+if gt t best
+best = t
+end
+end
+syn_rew m
+end
+if eq rl 0
+break
+end
+p = add p rl
+end
+end
+c = fclose int fd
+ret best
+end
+
+fn pu_sessmt c ulong to long
+so = pu_cf c 2
+sn = pu_cl c 2
+if eq sn 0
+ret neg long 1
+end
+if eq get gsp so 47
+ret pu_mtime so sn
+end
+mode = ulong 2
+if pu_isuuid so sn
+mode = 1
+end
+best = neg long 1
+fd = fopen gsp get gop 3 get gopl 3 524288 0
+if lt fd 0
+ret best
+end
+db = new uchar 32768 0
+while true bound 100000
+k = getdnts int fd db 0 len db
+if le k 0
+break
+end
+p = ulong 0
+while lt p ulong k bound 100000
+rl = or ulong get db add p 16 shl ulong get db add p 17 8
+nm = add p 19
+e = nm
+while and lt e add p rl ne get db e 0 bound 4096
+e = add e 1
+end
+if and gt sub e nm 0 ne get db nm 46
+m = syn_mark
+pu_popt 3
+syn_pb 47
+syn_pa db nm sub e nm
+t = pu_scan2 m syn_len m so sn mode
+if gt t best
+best = t
+end
+syn_rew m
+end
+if eq rl 0
+break
+end
+p = add p rl
+end
+end
+r = fclose int fd
+ret best
+end
+
+fn pu_sessions to void
+for c ulong get gcn 0
+if eq get gca c 1
+t = pu_sessmt c
+if lt t 0
+m = syn_mark
+text tdunk "session not found under --sessions (accepted: omp agent id, session uuid, absolute .jsonl path)"
+syn_pt tdunk
+pu_det m
+pu_fnd funk 0 c 4294967295
+else
+if gt get gnow 0 add ulong t 7200
+m = syn_mark
+text tddead "active lease but session file last written "
+syn_pt tddead
+syn_tsw ulong t
+text tddead2 " (over 2h ago)"
+syn_pt tddead2
+pu_det m
+pu_fnd fdead 1 c 4294967295
+end
+end
+end
+end
+end
+
+note intent tokens: lower-case alphanumeric runs of 4+ bytes, FNV-1a 32, stop words dropped
+fn pu_lc c uchar to uchar
+if and ge c 65 le c 90
+ret uchar add c 32
+end
+ret c
+end
+
+fn pu_isan c uchar to bool
+ret or or and ge c 48 le c 57 and ge c 97 le c 122 and ge c 65 le c 90
+end
+
+fn pu_isstop h uint to bool
+for i ulong get gstopn 0
+if eq get gstop i h
+ret true
+end
+end
+ret false
+end
+
+note pu_toks: hash the tokens of (o,n); mode 0 fills the stop list, mode 1 fills claim row c
+fn pu_toks o ulong n ulong mode ulong c ulong to void
+h = uint 2166136261
+k = ulong 0
+cnt = ulong 0
+for i ulong add n 1
+ch = uchar 32
+if lt i n
+ch = get gsp add o i
+end
+if pu_isan ch
+h = mul xor h uint pu_lc ch 16777619
+k = add k 1
+else
+if ge k 4
+if eq mode 0
+if lt get gstopn 0 32
+put gstop get gstopn 0 h
+put gstopn 0 add get gstopn 0 1
+end
+else
+dup = pu_isstop h
+for j ulong cnt
+if eq get gtk add mul c 24 j h
+dup = true
+end
+end
+if and not dup lt cnt 24
+put gtk add mul c 24 cnt h
+cnt = add cnt 1
+end
+end
+end
+h = 2166136261
+k = 0
+end
+end
+if eq mode 1
+put gtn c cnt
+end
+end
+
+fn pu_dup to void
+for c ulong get gcn 0
+put gtn c 0
+if eq get gca c 1
+pu_toks pu_cf c 7 pu_cl c 7 1 c
+end
+end
+n = get gcn 0
+for a ulong n
+for b ulong n
+if and and lt a b eq get gca a 1 eq get gca b 1
+if not syn_peq pu_cf a 1 pu_cl a 1 pu_cf b 1 pu_cl b 1
+na = get gtn a
+nb = get gtn b
+sh = ulong 0
+for i ulong na
+x = get gtk add mul a 24 i
+for j ulong nb
+if eq get gtk add mul b 24 j x
+sh = add sh 1
+end
+end
+end
+mn = min na nb
+if and ge sh 3 ge mul sh 2 mn
+m = syn_mark
+text tddup "intents share "
+syn_pt tddup
+syn_pd sh
+text tddup2 " of "
+syn_pt tddup2
+syn_pd mn
+text tddup3 " tokens: "
+syn_pt tddup3
+syn_ps pu_cf a 7 pu_cl a 7
+text tddup4 " || "
+syn_pt tddup4
+syn_ps pu_cf b 7 pu_cl b 7
+pu_det m
+pu_fnd fdup 1 a b
+end
+end
+end
+end
+end
+end
+
+note repos with active claims; grp marks repos holding an active path claim
+fn pu_repos to void
+put grn 0 0
+for c ulong get gcn 0
+rl = pu_cl c 9
+if and eq get gca c 1 ne rl 0
+ro = pu_cf c 9
+f = get grn 0
+for r ulong get grn 0
+if syn_peq get grpo r get grpl r ro rl
+f = r
+end
+end
+if and eq f get grn 0 lt f 128
+put grpo f ro
+put grpl f rl
+put grp f 0
+put grn 0 add f 1
+end
+if and lt f get grn 0 eq get gkd c 3
+put grp f 1
+end
+end
+end
+end
+
+note glob: * matches inside one path segment, ** any depth (including none)
+fn pu_glob p ulong pe ulong s ulong se ulong to bool
+if eq p pe
+ret eq s se
+end
+c = get gsp p
+if eq c 42
+if and lt add p 1 pe eq get gsp add p 1 42
+q = add p 2
+if and lt q pe eq get gsp q 47
+for i ulong add sub se s 1
+t = add s i
+if or eq i 0 eq get gsp sub t 1 47
+if pu_glob add q 1 pe t se
+ret true
+end
+end
+end
+ret false
+end
+for i ulong add sub se s 1
+if pu_glob q pe add s i se
+ret true
+end
+end
+ret false
+end
+for i ulong add sub se s 1
+if pu_glob add p 1 pe add s i se
+ret true
+end
+if lt add s i se
+if eq get gsp add s i 47
+ret false
+end
+end
+end
+ret false
+end
+if eq s se
+ret false
+end
+if ne c get gsp s
+ret false
+end
+ret pu_glob add p 1 pe add s 1 se
+end
+
+note GitHub: cache key is the request path with / replaced by ,
+fn pu_key2 po ulong pn ulong to ulong
+m = syn_mark
+for i ulong pn
+c = get gsp add po i
+if eq c 47
+c = 44
+end
+syn_pb c
+end
+ret m
+end
+
+fn pu_lognum t view uchar * v ulong to void
+syn_pt t
+syn_pd v
+end
+
+fn pu_reqlog po ulong pn ulong eo ulong en ulong st ulong bl ulong to void
+m = syn_mark
+syn_tsw div ulong realns 1000000000
+syn_pb 32
+syn_ps po pn
+syn_pt tinmeq
+if eq en 0
+syn_pt tdash
+else
+syn_ps eo en
+end
+pu_lognum tstateq st
+pu_lognum tbyteq bl
+syn_pt tsrceq
+if eq st 304
+syn_pt tscache
+else
+if eq get gfl 1 1
+syn_pt tsoff
+else
+syn_pt tsgh
+end
+end
+syn_pb 10
+l = syn_len m
+p = pu_pathi 0 tslreq
+fd = fopen gsp p syn_len p 525377 420
+if ge fd 0
+w = write int fd gsp m l
+c = fclose int fd
+end
+syn_rew m
+end
+
+note pu_lower: ASCII lower-case of byte
+fn pu_hdr a view uchar * s ulong e ulong to bool
+text tetagh "etag:"
+if lt sub e s 5
+ret false
+end
+for i ulong 5
+if ne pu_lc get a add s i get tetagh i
+ret false
+end
+end
+ret true
+end
+
+note pu_gh: GET path (po,pn); body moved to out[0..); returns body length, -1 cap, -2 failure, -3 too large
+fn pu_gh out edit uchar * po ulong pn ulong to long
+if ge get gcnt 2 40
+w = write 2 tcap 0 len tcap
+w = write 2 gsp po pn
+w = write 2 tnl 0 1
+put gcnt 5 add get gcnt 5 1
+ret neg long 1
+end
+put gcnt 2 add get gcnt 2 1
+base = syn_mark
+ko = pu_key2 po pn
+kn = syn_len ko
+eo = syn_mark
+ep = pu_pathi 0 tsletag
+syn_pb 47
+syn_ps ko kn
+syn_pt tetag
+epn = syn_len ep
+eb = new uchar 1024 0
+el = syn_rfile ep epn eb
+eo = syn_mark
+en = ulong 0
+if gt el 0
+for i ulong ulong el
+c = get eb i
+if and ne c 10 ne c 13
+syn_pb c
+en = add en 1
+end
+end
+end
+n = ulong 0
+if eq get gfl 1 1
+fp = pu_pathi 5 tsl
+syn_ps ko kn
+syn_pt thttp
+r = syn_rfile fp syn_len fp out
+if lt r 0
+w = write 2 tnofix 0 len tnofix
+w = write 2 gsp fp syn_len fp
+w = write 2 tnl 0 1
+syn_rew base
+put gcnt 3 add get gcnt 3 1
+ret neg long 2
+end
+n = ulong r
+else
+syn_ainit
+syn_at tenv
+syn_at tghome
+syn_at tgpath
+syn_ap get gop 2 get gopl 2
+syn_at tapi
+syn_at tdi
+if gt en 0
+syn_at tdh
+h = syn_mark
+syn_pt tinm
+syn_ps eo en
+syn_ap h syn_len h
+end
+syn_ap po pn
+n = syn_run out 60000000000
+if gt get gxs 0 1
+w = write 2 tghfail 0 len tghfail
+w = write 2 gsp po pn
+pu_errout tsp
+syn_rew base
+put gcnt 3 add get gcnt 3 1
+ret neg long 2
+end
+end
+if gt get gxs 1 long len out
+w = write 2 tbig 0 len tbig
+w = write 2 gsp po pn
+w = write 2 tnl 0 1
+syn_rew base
+ret neg long 3
+end
+st = ulong 0
+if and gt n 12 eq get out 0 72
+sp = ulong 0
+while and lt sp n ne get out sp 32 bound 64
+sp = add sp 1
+end
+for i ulong 3
+c = ulong get out min add add sp 1 i sub n 1
+st = add mul st 10 sub c 48
+end
+end
+ls = ulong 0
+bo = n
+neo = syn_mark
+nen = ulong 0
+ln = ulong 0
+for i ulong n
+if eq get out i 10
+e = i
+if and gt e ls eq get out sub e 1 13
+e = sub e 1
+end
+if and gt ln 0 eq e ls
+bo = add i 1
+break
+end
+if and gt ln 0 pu_hdr out ls e
+v = add ls 5
+while and lt v e eq get out v 32 bound 4096
+v = add v 1
+end
+syn_pa out v sub e v
+nen = sub e v
+end
+ln = add ln 1
+ls = add i 1
+end
+end
+bl = sub n min bo n
+if eq st 200
+for i ulong bl
+put out i get out add bo i
+end
+bp = pu_pathi 0 tsletag
+syn_pb 47
+syn_ps ko kn
+syn_pt tbody
+fd = syn_wbeg bp syn_len bp
+if ge fd 0
+w = write int fd out 0 bl
+r = syn_wend fd bp syn_len bp
+end
+if gt nen 0
+ep2 = syn_mark
+syn_ps ep epn
+fd = syn_wbeg ep2 epn
+if ge fd 0
+w = write int fd gsp neo nen
+r = syn_wend fd ep2 epn
+end
+end
+pu_reqlog po pn eo en st bl
+syn_rew base
+put gcnt 4 add get gcnt 4 1
+ret long bl
+end
+if eq st 304
+bp = pu_pathi 0 tsletag
+syn_pb 47
+syn_ps ko kn
+syn_pt tbody
+r = syn_rfile bp syn_len bp out
+if lt r 0
+q = unlink gsp ep epn
+w = write 2 tghfail 0 len tghfail
+w = write 2 gsp po pn
+w = write 2 tnl 0 1
+syn_rew base
+put gcnt 3 add get gcnt 3 1
+ret neg long 2
+end
+pu_reqlog po pn eo en st ulong r
+syn_rew base
+put gcnt 4 add get gcnt 4 1
+ret r
+end
+pu_reqlog po pn eo en st bl
+w = write 2 tghfail 0 len tghfail
+w = write 2 gsp po pn
+w = write 2 tnl 0 1
+syn_rew base
+put gcnt 3 add get gcnt 3 1
+ret neg long 2
+end
+
+fn pu_pulls r ulong to void
+out = new uchar 1114112 0
+tape = new uint 786432 0
+tmp = new uchar 8192 0
+m = syn_mark
+syn_pt trepos
+syn_ps get grpo r get grpl r
+syn_pt tpulls
+pl = syn_len m
+n = pu_gh out m pl
+syn_rew m
+if lt n 0
+ret
+end
+if gt n 983040
+w = write 2 tbig 0 len tbig
+w = write 2 tnl 0 1
+ret
+end
+q = js_init tape 983040 64
+q = js_parse out tape ulong n
+if or lt q 0 ne js_type tape 0 jsarr
+text tbadpr "synapse-pulse: PR list did not parse"
+w = write 2 tbadpr 0 len tbadpr
+w = write 2 tnl 0 1
+ret
+end
+e = js_first tape 0
+while ne e jsnone bound 100000
+nu = pu_memb out tape e tknum
+sv = pu_memb out tape e tkstate
+mv = pu_memb out tape e tkmerg
+hv = pu_memb out tape e tkhead
+i = get gprc 0
+if and ne nu jsnone lt i 8192
+put gprr i r
+put gprn i js_tou out js_off tape nu
+put gprs i 2
+if ne sv jsnone
+if js_streq out js_off tape sv topen
+put gprs i 1
+end
+end
+put gprm i 0
+if ne mv jsnone
+if eq js_type tape mv jsstr
+put gprm i 1
+end
+end
+put gprho i 0
+put gprhl i 0
+if ne hv jsnone
+rv = pu_memb out tape hv tkref
+if ne rv jsnone
+o = pu_sval out tape rv tmp
+put gprho i o
+put gprhl i ulong get gxs 2
+end
+end
+put gprc 0 add i 1
+end
+e = js_enext tape e
+end
+end
+
+note pu_prclaimed: an active pr: or branch: claim covers PR row i
+fn pu_prclaim i ulong to bool
+r = get gprr i
+for c ulong get gcn 0
+if and eq get gca c 1 syn_peq pu_cf c 9 pu_cl c 9 get grpo r get grpl r
+k = get gkd c
+if eq k 4
+v = syn_pdec pu_cf c 10 pu_cl c 10
+if and eq get gxs 2 1 eq v get gprn i
+ret true
+end
+end
+if and eq k 2 ne get gprhl i 0
+if syn_peq pu_cf c 10 pu_cl c 10 get gprho i get gprhl i
+ret true
+end
+end
+end
+end
+ret false
+end
+
+fn pu_files i ulong to void
+out = new uchar 1114112 0
+tape = new uint 786432 0
+tmp = new uchar 8192 0
+hit = new uchar 1024 0
+r = get gprr i
+m = syn_mark
+syn_pt trepos
+syn_ps get grpo r get grpl r
+syn_pt tpullsl
+syn_pd get gprn i
+syn_pt tfiles
+pl = syn_len m
+n = pu_gh out m pl
+syn_rew m
+if or lt n 0 gt n 983040
+ret
+end
+q = js_init tape 983040 64
+q = js_parse out tape ulong n
+if or lt q 0 ne js_type tape 0 jsarr
+ret
+end
+e = js_first tape 0
+while ne e jsnone bound 100000
+fv = pu_memb out tape e tkfile
+if ne fv jsnone
+fm = syn_mark
+fo = pu_sval out tape fv tmp
+fl = ulong get gxs 2
+for c ulong get gcn 0
+if and and eq get gca c 1 eq get gkd c 3 eq get hit c 0
+if syn_peq pu_cf c 9 pu_cl c 9 get grpo r get grpl r
+po = pu_cf c 10
+if pu_glob po add po pu_cl c 10 fo add fo fl
+put hit c 1
+m = syn_mark
+text tdunc1 "open PR #"
+syn_pt tdunc1
+syn_pd get gprn i
+text tdunc2 " (head "
+syn_pt tdunc2
+syn_ps get gprho i get gprhl i
+text tdunc3 ") changes a path held by "
+syn_pt tdunc3
+syn_ps pu_cf c 1 pu_cl c 1
+text tdunc4 " and no pr: or branch: claim covers it"
+syn_pt tdunc4
+pu_det m
+put gfp 0 get gprn i
+put gfp 1 fo
+put gfp 2 fl
+pu_fnd funcl 1 c 4294967295
+end
+end
+end
+end
+end
+e = js_enext tape e
+end
+end
+
+fn pu_prrow r ulong num ulong to ulong
+for i ulong get gprc 0
+if and eq get gprr i r eq get gprn i num
+ret i
+end
+end
+ret 4294967295
+end
+
+fn pu_ridx o ulong n ulong to ulong
+for r ulong get grn 0
+if syn_peq get grpo r get grpl r o n
+ret r
+end
+end
+ret 4294967295
+end
+
+fn pu_status to void
+for c ulong get gcn 0
+k = get gkd c
+r = pu_ridx pu_cf c 9 pu_cl c 9
+ok = lt r get grn 0
+mg = or syn_seq pu_cf c 6 pu_cl c 6 tmerged syn_seq pu_cf c 6 pu_cl c 6 tdeploy
+if and ok eq k 4
+v = syn_pdec pu_cf c 10 pu_cl c 10
+i = pu_prrow r v
+if lt i get gprc 0
+put gfp 0 v
+if and mg eq get gprm i 0
+m = syn_mark
+text tdst1 "claim state "
+syn_pt tdst1
+syn_ps pu_cf c 6 pu_cl c 6
+text tdst2 " but GitHub PR is not merged (state "
+syn_pt tdst2
+if eq get gprs i 1
+syn_pt topen
+else
+syn_pt tclosed
+end
+syn_pb 41
+pu_det m
+pu_fnd fstat 1 c 4294967295
+else
+if and eq get gca c 1 eq get gprs i 2
+m = syn_mark
+text tdst3 "GitHub PR is closed ("
+syn_pt tdst3
+if eq get gprm i 1
+syn_pt tmerged
+else
+text tunm "not merged"
+syn_pt tunm
+end
+text tdst4 ") but the claim is still active"
+syn_pt tdst4
+pu_det m
+pu_fnd fstat 1 c 4294967295
+end
+end
+put gfp 0 0
+end
+end
+if and and ok eq k 2 mg
+seen = ulong 0
+any = ulong 0
+for i ulong get gprc 0
+if and eq get gprr i r syn_peq get gprho i get gprhl i pu_cf c 10 pu_cl c 10
+seen = add seen 1
+any = or any ulong get gprm i
+end
+end
+if and gt seen 0 eq any 0
+m = syn_mark
+text tdst5 "claim state "
+syn_pt tdst5
+syn_ps pu_cf c 6 pu_cl c 6
+text tdst6 " but no GitHub PR from this branch is merged"
+syn_pt tdst6
+pu_det m
+pu_fnd fstat 1 c 4294967295
+end
+end
+end
+end
+
+fn pu_github to void
+for r ulong get grn 0
+pu_pulls r
+end
+for i ulong get gprc 0
+if and eq get gprs i 1 eq get grp get gprr i 1
+if not pu_prclaim i
+pu_files i
+end
+end
+end
+pu_status
+end
+
+note alert in exactly the aien-watch format; kind COORD-DRIFT
+fn pu_alkeep a view uchar * s ulong e ulong to bool
+if pu_isdrift a s e
+ret false
+end
+if ge s e
+ret false
+end
+c = get a s
+if or lt c 65 gt c 90
+ret false
+end
+i = add s 1
+while lt i e bound 4096
+c = get a i
+if eq c 58
+ret and lt add i 1 e eq get a add i 1 32
+end
+if not or or and ge c 65 le c 90 and ge c 48 le c 57 eq c 45
+ret false
+end
+i = add i 1
+end
+ret false
+end
+
+fn pu_isdrift a view uchar * s ulong e ulong to bool
+if lt sub e s len tkalcol
+ret false
+end
+for i ulong len tkalcol
+if ne get a add s i get tkalcol i
+ret false
+end
+end
+ret true
+end
+
+fn pu_alog m ulong to void
+p = pu_pathi 1 tslalog
+fd = fopen gsp p syn_len p 525377 420
+syn_rew p
+if ge fd 0
+w = write int fd gsp m syn_len m
+c = fclose int fd
+end
+end
+
+note pu_alsel: sel 0 appends the COORD-DRIFT lines (each cut to 400 bytes, joined by newline) and
+note returns their count; sel 1 appends every other well-formed KIND line with its newline
+fn pu_alsel buf view uchar * nn ulong sel ulong to ulong
+ls = ulong 0
+cnt = ulong 0
+for i ulong add nn 1
+if or eq i nn eq get buf min i sub len buf 1 10
+if gt i ls
+if eq sel 0
+if pu_isdrift buf ls i
+if gt cnt 0
+syn_pb 10
+end
+syn_pa buf ls min sub i ls 400
+cnt = add cnt 1
+end
+else
+if pu_alkeep buf ls i
+syn_pa buf ls sub i ls
+syn_pb 10
+cnt = add cnt 1
+end
+end
+end
+ls = add i 1
+end
+end
+ret cnt
+end
+
+note pu_flat: aien-watch text rule: newline, tab, CR to space; squeeze spaces; first 600 bytes
+fn pu_flat xo ulong tn ulong to void
+sp = false
+k = ulong 0
+for i ulong tn
+c = get gsp add xo i
+if or or eq c 10 eq c 9 eq c 13
+c = 32
+end
+if not and sp eq c 32
+if lt k 600
+syn_pb c
+k = add k 1
+end
+end
+sp = eq c 32
+end
+end
+
+note pu_alert: mode 1 raise with text (xo,tn), mode 0 resolve; garr holds the pool pieces
+fn pu_alert mode ulong xo ulong tn ulong to void
+buf = new uchar 262144 0
+base = syn_mark
+syn_tsw div ulong realns 1000000000
+put garr 0 base
+put garr 1 syn_len base
+ap = pu_pathi 1 tslalert
+apl = syn_len ap
+n = syn_rfile ap apl buf
+nn = ulong 0
+if gt n 0
+nn = ulong n
+end
+cls = syn_mark
+nd = pu_alsel buf nn 0
+put garr 2 cls
+put garr 3 syn_len cls
+if and eq mode 0 eq nd 0
+syn_rew base
+ret
+end
+txt = syn_mark
+if eq mode 1
+pu_flat xo tn
+end
+put garr 4 txt
+put garr 5 syn_len txt
+kp = syn_mark
+k = pu_alsel buf nn 1
+if eq mode 1
+syn_pt tkalcol
+syn_pb 32
+syn_ps get garr 4 get garr 5
+syn_pt tsince
+syn_ps get garr 0 get garr 1
+syn_pt tdetails
+pu_popt 1
+syn_pt tclear
+end
+kl = syn_len kp
+if gt kl 0
+fd = syn_wbeg ap apl
+if ge fd 0
+w = write int fd gsp kp kl
+r = syn_wend fd ap apl
+end
+else
+r = unlink gsp ap apl
+end
+lm = syn_mark
+syn_ps get garr 0 get garr 1
+if eq mode 1
+syn_pb 32
+syn_pt tkalert
+syn_pb 32
+syn_ps get garr 4 get garr 5
+else
+syn_pt tresolv
+syn_ps get garr 2 get garr 3
+end
+syn_pb 10
+pu_alog lm
+syn_rew base
+end

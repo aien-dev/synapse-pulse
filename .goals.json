@@ -1,0 +1,22 @@
+{
+  "schema": "goals/v1",
+  "project": "synapse-pulse",
+  "parent": "aien-dev/synapse@099a980fedab8a6797bbf0358b8c5502c8045142",
+  "goals": [
+    {
+      "id": "PULSE-1",
+      "title": "Reconcile claims ledger with GitHub PRs and omp sessions; findings JSONL with 12 fixed keys",
+      "status": "in_progress"
+    },
+    {
+      "id": "PULSE-2",
+      "title": "COORD-DRIFT alert in the exact aien-watch ALERT/alerts.log format, resolved by a clean run",
+      "status": "in_progress"
+    },
+    {
+      "id": "PULSE-3",
+      "title": "ETag cache and 40-request cap so a run costs at most 40 GitHub API calls and 304s are free",
+      "status": "in_progress"
+    }
+  ]
+}

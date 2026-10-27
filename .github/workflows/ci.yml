@@ -1,0 +1,21 @@
+name: ci
+on:
+  push:
+    branches: [wip, main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out omega-mv at omega.pin
+        run: |
+          sha=$(sed -n '1s/^aien-dev\/omega-mv@//p' omega.pin)
+          git clone --quiet https://github.com/aien-dev/omega-mv.git omega-mv
+          git -C omega-mv checkout --quiet --detach "$sha"
+          test "$(git -C omega-mv rev-parse HEAD)" = "$sha"
+      - name: Verify pinned omc
+        run: |
+          echo "$(sed -n '2s/^omc-sha256 //p' omega.pin)  omega-mv/seed/out/omc" | sha256sum -c
+      - name: Tests
+        run: OMEGA_SRC=$PWD/omega-mv sh tests/run.sh

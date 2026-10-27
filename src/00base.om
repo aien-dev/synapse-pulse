@@ -1,0 +1,430 @@
+note synapse 00base.om: string pool, packed argv, child exec with memfd capture, decimal and time helpers.
+note The same file is copied, not shared, into synapse-mcp: each repo builds on its own (Unix rule).
+global gsp uchar 8388608
+global gspn ulong 1
+global gav uchar 4096
+global gavs ulong 4
+global gxs long 4
+global gerrb uchar 8192
+global gerrn ulong 1
+text tmemfd "synapse-cap"
+text tdevnul "/dev/null"
+text tnl "\n"
+text tfull "synapse: string pool full"
+text tavfull "synapse: argument list over 64 records or 4096 bytes"
+text tavz "synapse: argument holds a zero byte"
+text targlong "synapse: argument over 4095 bytes"
+text ttmp ".tmp"
+
+fn syn_die msg view uchar * code int to void
+w = write 2 msg 0 len msg
+w = write 2 tnl 0 1
+exit code
+end
+
+fn syn_pb c uchar to void
+n = get gspn 0
+if ge n len gsp
+syn_die tfull 70
+end
+put gsp n c
+put gspn 0 add n 1
+end
+
+fn syn_pt t view uchar * to void
+for i ulong len t
+syn_pb get t i
+end
+end
+
+fn syn_pa a view uchar * o ulong n ulong to void
+for i ulong n
+syn_pb get a add o i
+end
+end
+
+fn syn_ps o ulong n ulong to void
+for i ulong n
+syn_pb get gsp add o i
+end
+end
+
+fn syn_pd v ulong to void
+d = new uchar 24 0
+k = ulong 0
+x = v
+while true bound 24
+put d k uchar add 48 mod x 10
+k = add k 1
+x = div x 10
+if eq x 0
+break
+end
+end
+for i ulong k
+syn_pb get d sub sub k i 1
+end
+end
+
+fn syn_mark to ulong
+ret get gspn 0
+end
+
+fn syn_rew m ulong to void
+put gspn 0 m
+end
+
+fn syn_len m ulong to ulong
+ret sub get gspn 0 m
+end
+
+note syn_seq: pool string (o,n) equals text t
+fn syn_seq o ulong n ulong t view uchar * to bool
+if ne n len t
+ret false
+end
+for i ulong n
+if ne get gsp add o i get t i
+ret false
+end
+end
+ret true
+end
+
+note syn_peq: two pool strings are equal
+fn syn_peq a ulong an ulong b ulong bn ulong to bool
+if ne an bn
+ret false
+end
+for i ulong an
+if ne get gsp add a i get gsp add b i
+ret false
+end
+end
+ret true
+end
+
+note syn_pre: pool string (o,n) starts with text t
+fn syn_pre o ulong n ulong t view uchar * to bool
+if lt n len t
+ret false
+end
+for i ulong len t
+if ne get gsp add o i get t i
+ret false
+end
+end
+ret true
+end
+
+note syn_find: first index >= from of byte c in pool string (o,n), or n
+fn syn_find o ulong n ulong from ulong c uchar to ulong
+i = from
+while lt i n bound 999999
+if eq get gsp add o i c
+ret i
+end
+i = add i 1
+end
+ret n
+end
+
+note syn_pdec: parse a decimal pool string; gxs 2 is 1 when it was all digits
+fn syn_pdec o ulong n ulong to ulong
+v = ulong 0
+put gxs 2 1
+if eq n 0
+put gxs 2 0
+end
+for i ulong n
+c = ulong get gsp add o i
+if or lt c 48 gt c 57
+put gxs 2 0
+ret v
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+note packed argument list: u16 count, then per record u16 length and the bytes
+fn syn_ainit to void
+put gav 0 0
+put gav 1 0
+put gavs 0 2
+put gavs 1 0
+end
+
+fn syn_ahead n ulong to ulong
+u = get gavs 0
+c = get gavs 1
+if or ge c 64 gt add add u 2 n len gav
+syn_die tavfull 64
+end
+put gav u uchar and n 255
+put gav add u 1 uchar shr n 8
+put gavs 1 add c 1
+put gav 0 uchar and add c 1 255
+put gav 1 uchar shr add c 1 8
+ret add u 2
+end
+
+fn syn_at t view uchar * to void
+u = syn_ahead len t
+for i ulong len t
+put gav add u i get t i
+end
+put gavs 0 add u len t
+end
+
+note syn_ap: add pool string (o,n) as one record; a zero byte is refused (execprog cannot carry it)
+fn syn_ap o ulong n ulong to void
+u = syn_ahead n
+for i ulong n
+c = get gsp add o i
+if eq c 0
+syn_die tavz 65
+end
+put gav add u i c
+end
+put gavs 0 add u n
+end
+
+fn syn_rdall fd int out edit uchar * cap ulong to ulong
+k = ulong 0
+while lt k cap bound 999999
+r = read fd out k sub cap k
+if le r 0
+break
+end
+k = add k ulong r
+end
+ret k
+end
+
+note syn_run: run the packed list in gav (first record an absolute path, never a shell)
+note child stdin /dev/null, stdout and stderr captured in memfds; out gets up to len out bytes.
+note gxs 0: exit code 0..255, 300+signal, 400 timeout (killed), 401 fork or memfd failure
+note gxs 1: full stdout size (may exceed len out); gerrb holds the first stderr bytes
+fn syn_run out edit uchar * tmo ulong to ulong
+put gerrn 0 0
+m = int memfd tmemfd 0 len tmemfd 1
+e = int memfd tmemfd 0 len tmemfd 1
+if or lt m 0 lt e 0
+put gxs 0 401
+ret 0
+end
+pid = fork
+if lt pid 0
+put gxs 0 401
+ret 0
+end
+if eq pid 0
+r = dupfd m 1 0
+r = dupfd e 2 0
+nf = fopen tdevnul 0 len tdevnul 0 0
+if ge nf 0
+r = dupfd int nf 0 0
+end
+r = execprog gav 0 get gavs 0
+exit 127
+end
+st = new uchar 4 0
+t0 = monons
+code = long 400
+while true bound 999999
+r = waitpid int pid st 0 4 1
+if eq r long pid
+s0 = and get st 0 127
+if ne s0 0
+code = add 300 long s0
+else
+code = long get st 1
+end
+break
+end
+if lt r 0
+code = 401
+break
+end
+if gt sub monons t0 long tmo
+r = killpid int pid 9
+r = waitpid int pid st 0 4 0
+code = 400
+break
+end
+r = sleepns 2000000
+end
+put gxs 0 code
+sz = fseek m 0 2
+put gxs 1 sz
+r = fseek m 0 0
+n = syn_rdall m out len out
+r = fseek e 0 0
+k = syn_rdall e gerrb len gerrb
+put gerrn 0 k
+r = fclose m
+r = fclose e
+ret n
+end
+
+note civil date (proleptic Gregorian, years 1970..9999), Hinnant's days_from_civil and back
+fn syn_days y ulong m ulong d ulong to ulong
+yy = y
+if le m 2
+yy = sub y 1
+end
+era = div yy 400
+yoe = sub yy mul era 400
+mm = add m 9
+if gt m 2
+mm = sub m 3
+end
+doy = add div add mul 153 mm 2 5 sub d 1
+doe = add sub add mul yoe 365 div yoe 4 div yoe 100 doy
+ret sub add mul era 146097 doe 719468
+end
+
+note syn_tsp: parse YYYY-MM-DDTHH:MM:SSZ at pool (o,n) to epoch seconds; gxs 2 is 1 when well formed
+fn syn_tsp o ulong n ulong to ulong
+put gxs 3 1
+if ne n 20
+put gxs 3 0
+ret 0
+end
+y = syn_pdec o 4
+ok = get gxs 2
+mo = syn_pdec add o 5 2
+ok = and ok get gxs 2
+d = syn_pdec add o 8 2
+ok = and ok get gxs 2
+h = syn_pdec add o 11 2
+ok = and ok get gxs 2
+mi = syn_pdec add o 14 2
+ok = and ok get gxs 2
+s = syn_pdec add o 17 2
+ok = and ok get gxs 2
+put gxs 2 ok
+if or eq ok 0 or lt y 1970 or lt mo 1 gt mo 12
+put gxs 2 0
+ret 0
+end
+dd = syn_days y mo d
+ret add add add mul dd 86400 mul h 3600 mul mi 60 s
+end
+
+fn syn_p2 v ulong to void
+syn_pb uchar add 48 div v 10
+syn_pb uchar add 48 mod v 10
+end
+
+note syn_tsw: append epoch seconds t as YYYY-MM-DDTHH:MM:SSZ to the pool
+fn syn_tsw t ulong to void
+z = add div t 86400 719468
+sd = mod t 86400
+era = div z 146097
+doe = sub z mul era 146097
+yoe = div sub add sub doe div doe 1460 div doe 36524 div doe 146096 365
+y = add yoe mul era 400
+doy = sub doe sub add mul 365 yoe div yoe 4 div yoe 100
+mp = div add mul 5 doy 2 153
+d = add sub doy div add mul 153 mp 2 5 1
+m = add mp 3
+if ge mp 10
+m = sub mp 9
+end
+if le m 2
+y = add y 1
+end
+syn_pd y
+syn_pb 45
+syn_p2 m
+syn_pb 45
+syn_p2 d
+syn_pb 84
+syn_p2 div sd 3600
+syn_pb 58
+syn_p2 div mod sd 3600 60
+syn_pb 58
+syn_p2 mod sd 60
+syn_pb 90
+end
+
+note syn_arg: copy argument i into the pool; returns its offset, gxs 2 its length
+fn syn_arg i ulong to ulong
+b = new uchar 4096 0
+n = argread int i b 0 len b
+if lt n 0
+put gxs 2 0
+ret get gspn 0
+end
+if ge n long len b
+syn_die targlong 64
+end
+o = get gspn 0
+syn_pa b 0 ulong n
+put gxs 2 n
+ret o
+end
+
+note syn_wbeg: open (po,pn).tmp for writing; descriptor or negative errno. Finish with syn_wend.
+fn syn_wbeg po ulong pn ulong to long
+mk = syn_mark
+syn_ps po pn
+syn_pt ttmp
+fd = fopen gsp mk add pn 4 524865 420
+syn_rew mk
+ret fd
+end
+
+note syn_wend: sync and close fd, then rename (po,pn).tmp over (po,pn); 0 or negative errno
+fn syn_wend fd long po ulong pn ulong to long
+pk = new uchar 8200 0
+r = fdsync int fd
+c = fclose int fd
+put pk 0 2
+put pk 1 0
+put pk 2 uchar and add pn 4 255
+put pk 3 uchar shr add pn 4 8
+for i ulong pn
+put pk add 4 i get gsp add po i
+end
+for i ulong 4
+put pk add add 4 pn i get ttmp i
+end
+q = add add 4 pn 4
+put pk q uchar and pn 255
+put pk add q 1 uchar shr pn 8
+for i ulong pn
+put pk add add q 2 i get gsp add po i
+end
+tl = add q add 2 pn
+if lt r 0
+ret r
+end
+r = renames pk 0 tl 0
+ret r
+end
+
+note syn_rfile: read the file at pool path (po,pn) into out; byte count or negative errno; gxs 1 holds the file size
+fn syn_rfile po ulong pn ulong out edit uchar * to long
+fd = fopen gsp po pn 524288 0
+if lt fd 0
+ret fd
+end
+sz = fseek int fd 0 2
+put gxs 1 sz
+r = fseek int fd 0 0
+n = syn_rdall int fd out len out
+c = fclose int fd
+ret long n
+end
+
+note syn_mkdir: make directory (po,pn); an existing one is fine
+fn syn_mkdir po ulong pn ulong to long
+r = makedir gsp po pn 493
+if eq r neg long 17
+ret 0
+end
+ret r
+end

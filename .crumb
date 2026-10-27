@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "name": "synapse-pulse",
+  "purpose": "Reconcile the coordination claims ledger against GitHub pull requests and live omp sessions; emit findings JSONL and a COORD-DRIFT alert.",
+  "layer": "coordination",
+  "extensions": {
+    "map": {
+      "parent": "aien-dev/synapse@099a980fedab8a6797bbf0358b8c5502c8045142",
+      "parent_status": "CONFIRMED"
+    }
+  }
+}

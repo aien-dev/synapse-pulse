@@ -1,0 +1,215 @@
+note synapse-pulse 20main.om: arguments, defaults, run order, findings file, alert, exit code.
+fn pu_usage to void
+syn_die tusage 64
+end
+
+note pu_envopt: option i from environment entry with prefix t, plus suffix s; true when found
+fn pu_envopt i ulong t view uchar * s view uchar * to bool
+b = new uchar 8192 0
+for e ulong envcnt
+n = envread e b 0 len b
+if gt n long len t
+ok = true
+for j ulong len t
+if ne get b j get t j
+ok = false
+end
+end
+if ok
+m = syn_mark
+syn_pa b len t sub ulong n len t
+syn_pt s
+put gop i m
+put gopl i syn_len m
+ret true
+end
+end
+end
+ret false
+end
+
+fn pu_setdef i ulong t view uchar * to void
+if eq get gopl i 0
+m = syn_mark
+syn_pt t
+put gop i m
+put gopl i syn_len m
+end
+end
+
+fn pu_args to void
+n = argcnt
+i = ulong 1
+sawrun = false
+while lt i n bound 1000
+o = syn_arg i
+l = get gxs 2
+if syn_seq o l trun
+sawrun = true
+i = add i 1
+continue
+end
+if syn_seq o l talert
+put gfl 0 1
+i = add i 1
+continue
+end
+k = ulong 99
+if syn_seq o l thome
+k = 0
+end
+if syn_seq o l tadir
+k = 1
+end
+if syn_seq o l tgh
+k = 2
+end
+if syn_seq o l tsess
+k = 3
+end
+if syn_seq o l tcbin
+k = 4
+end
+if syn_seq o l toff
+k = 5
+end
+if syn_seq o l tnow
+k = 6
+end
+if or eq k 99 ge add i 1 n
+pu_usage
+end
+v = syn_arg add i 1
+vl = get gxs 2
+if eq vl 0
+pu_usage
+end
+put gop k v
+put gopl k vl
+i = add i 2
+end
+if not sawrun
+pu_usage
+end
+end
+
+note the AIEN_COORD_HOME branch above used tnl as an empty suffix; strip it
+fn pu_fixhome to void
+l = get gopl 0
+if and gt l 0 eq get gsp add get gop 0 sub l 1 10
+put gopl 0 sub l 1
+end
+end
+
+fn pu_setup to void
+if eq get gopl 0 0
+if not pu_envopt 0 tenvh tnl
+if not pu_envopt 0 tenvhm tdhome
+syn_die tnohome 64
+end
+end
+end
+if eq get gopl 0 0
+syn_die tnohome 64
+end
+pu_fixhome
+pu_setdef 1 tdadir
+pu_setdef 2 tdgh
+pu_setdef 3 tdsess
+if eq get gopl 4 0
+syn_die tnocbin 64
+end
+if ne get gsp get gop 4 47
+syn_die tnocbin 64
+end
+if pu_opt 5
+put gfl 1 1
+end
+if pu_opt 6
+t = syn_tsp get gop 6 get gopl 6
+if eq get gxs 2 0
+syn_die tbadnow 64
+end
+put gnow 0 t
+put gfl 2 1
+else
+put gnow 0 div ulong realns 1000000000
+end
+m = pu_pathi 0 tslpu
+r = syn_mkdir m syn_len m
+syn_rew m
+m = pu_pathi 0 tsletag
+r = syn_mkdir m syn_len m
+syn_rew m
+m = syn_mark
+syn_pt tstops
+pu_toks m syn_len m 0 0
+syn_rew m
+end
+
+fn pu_mkalert to ulong
+if eq get gcnt 0 0
+pu_alert 0 0 0
+ret 0
+end
+m = syn_mark
+syn_pd get gcnt 0
+text tsum1 " coordination finding(s) in "
+syn_pt tsum1
+pu_popt 0
+syn_pt tslfind
+text tsum2 "; first: "
+syn_pt tsum2
+syn_ps get gcnt 9 get gcnt 10
+pu_alert 1 m syn_len m
+ret 1
+end
+
+fn main to int
+pu_args
+pu_setup
+r = pu_ldclaims
+if lt r 0
+ret int neg r
+end
+r = pu_expire
+if lt r 0
+ret int neg r
+end
+r = pu_ldconf
+if lt r 0
+ret int neg r
+end
+pu_sessions
+pu_dup
+pu_repos
+pu_github
+if eq get gfl 7 1
+text tofull "synapse-pulse: findings over 4 MiB, truncated"
+w = write 2 tofull 0 len tofull
+w = write 2 tnl 0 1
+end
+w = write 1 gout 0 get gon 0
+fp = pu_pathi 0 tslfind
+fd = syn_wbeg fp syn_len fp
+if lt fd 0
+text tfwerr "synapse-pulse: cannot write findings.jsonl"
+syn_die tfwerr 70
+end
+w = write int fd gout 0 get gon 0
+r = syn_wend fd fp syn_len fp
+if lt r 0
+syn_die tfwerr 70
+end
+syn_rew fp
+if eq get gfl 0 1
+r2 = pu_mkalert
+end
+if gt get gcnt 0 0
+ret 1
+end
+if and gt get gcnt 3 0 eq get gcnt 4 0
+ret 75
+end
+ret 0
+end
