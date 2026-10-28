@@ -1,5 +1,8 @@
 # AGENTS.md: synapse-pulse protocol
 
+Development follows [Human-Directed Agentic Engineering (HDAE)](README.md#human-directed-agentic-engineering).
+The README defines the human and agent responsibilities and cites Gregory M. Kurtzer's report.
+
 - Run `synapse-pulse run --claims-bin /home/drakestapleton/.local/bin/synapse-claims` (add `--alert` from the
   watch loop). Read findings from stdout or `HOME/pulse/findings.jsonl`; never parse stderr.
 - HOME is `--home`, else `$AIEN_COORD_HOME`, else `$HOME/.local/state/aien-coord`; with none, exit 64.

@@ -1,12 +1,24 @@
 {
-  "schema_version": "1.0.0",
-  "name": "synapse-pulse",
-  "purpose": "Reconcile the coordination claims ledger against GitHub pull requests and live omp sessions; emit findings JSONL and a COORD-DRIFT alert.",
-  "layer": "coordination",
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-28T21:31:25Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:4a4e3cdc31842e1525db7cc99b88c67475ae5662bea75e1ecee592437564d0ae",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 16,
+      "generated_at_commit": "0c7ba22f1bebe0e6ab253d885b4badd8dff8bfd7",
+      "source_tree": "sha256:47784766609af813b71de60ac509f4787a5b7ee0ea236ece9cbe255ba093dc67"
+    },
     "map": {
       "parent": "aien-dev/synapse@099a980fedab8a6797bbf0358b8c5502c8045142",
       "parent_status": "CONFIRMED"
     }
-  }
+  },
+  "layer": "coordination",
+  "name": "synapse-pulse",
+  "purpose": "Reconcile the coordination claims ledger against GitHub pull requests and live omp sessions; emit findings JSONL and a COORD-DRIFT alert.",
+  "schema_version": "1.0.0"
 }

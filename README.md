@@ -38,3 +38,14 @@ Build: `./build.sh /path/to/omega-mv out/synapse-pulse`. Test: `OMEGA_SRC=/path/
 - [aien-dev/synapse-pulse](https://github.com/aien-dev/synapse-pulse): this reconciler
 - [aien-dev/synapse-mcp](https://github.com/aien-dev/synapse-mcp): MCP server exposing the tools
 - [aien-dev/synapse-board](https://github.com/aien-dev/synapse-board): generated board views and BOARD.md migration
+
+## Human-Directed Agentic Engineering
+
+Development follows Human-Directed Agentic Engineering (HDAE): humans define goals, architecture,
+constraints, acceptance criteria, and stopping points; agents implement, execute checks, diagnose
+failures, and revise within those boundaries. Human review retains responsibility for claims,
+acceptance, and release decisions.
+
+For the documented method and a systems-software case study, see Gregory M. Kurtzer,
+[*Ginux: Building an Independent Kernel That Runs Linux Userspace through Human-Directed Agentic
+Engineering* (2026)](https://doi.org/10.5281/zenodo.23682548).
